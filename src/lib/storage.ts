@@ -6,7 +6,7 @@ export type MessageStatus = "pending" | "approved" | "rejected" | "solved" | "un
 export interface AttachedFile {
   name: string;
   type: string;
-  data: string; // base64 without prefix
+  data: string;
 }
 
 export interface Message {
