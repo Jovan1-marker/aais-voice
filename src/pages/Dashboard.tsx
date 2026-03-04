@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,19 @@ const Dashboard = () => {
       return;
     }
     reload();
+
+    const channel = supabase
+      .channel("aais_messages_realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "aais_messages" },
+        () => reload()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filtered = (statuses: Message["status"][]) => {
