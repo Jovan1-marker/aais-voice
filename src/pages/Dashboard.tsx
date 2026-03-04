@@ -10,10 +10,14 @@ import {
   type Message, type MessageType, MESSAGE_TYPES, getCategoryColor,
   isImageFile, getBase64Src,
 } from "@/lib/storage";
-import { Check, X, Trash2, ChevronDown, ChevronUp, FileText, Image as ImageIcon } from "lucide-react";
+import { Check, X, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle, XCircle } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { format } from "date-fns";
+
+const INITIAL_VISIBLE = 3;
+
+const isSolveType = (type: MessageType) => type === "Suggestion" || type === "Concern";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -21,6 +25,7 @@ const Dashboard = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [showAllPending, setShowAllPending] = useState(false);
 
   useEffect(() => {
     if (sessionStorage.getItem("isAdmin") !== "true") {
@@ -35,31 +40,31 @@ const Dashboard = () => {
     setMessages(cleaned);
   };
 
-  const filtered = (status: Message["status"]) => {
-    let msgs = messages.filter((m) => m.status === status);
+  const filtered = (statuses: Message["status"][]) => {
+    let msgs = messages.filter((m) => statuses.includes(m.status));
     if (categoryFilter !== "all") {
       msgs = msgs.filter((m) => m.type === categoryFilter);
     }
     return msgs;
   };
 
-  const pending = filtered("pending");
-  const history = [...filtered("approved"), ...filtered("rejected")].sort(
+  const pending = filtered(["pending"]);
+  const history = filtered(["approved", "rejected", "solved", "unsolved"]).sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
   const totalPending = messages.filter((m) => m.status === "pending").length;
 
-  const handleApprove = (id: number) => {
-    updateMessageStatus(id, "approved");
-    reload();
-    toast({ title: "✅ Approved" });
-  };
+  // Show collapse when "all" filter and 3+ pending
+  const shouldCollapsePending = categoryFilter === "all" && pending.length > INITIAL_VISIBLE && !showAllPending;
+  const visiblePending = shouldCollapsePending ? pending.slice(0, INITIAL_VISIBLE) : pending;
+  const hiddenPendingCount = pending.length - INITIAL_VISIBLE;
 
-  const handleReject = (id: number) => {
-    updateMessageStatus(id, "rejected");
+  const handleAction = (id: number, status: Message["status"], label: string) => {
+    updateMessageStatus(id, status);
     reload();
-    toast({ title: "❌ Rejected" });
+    const emoji = status === "approved" || status === "solved" ? "✅" : "❌";
+    toast({ title: `${emoji} ${label}` });
   };
 
   const handleDelete = (id: number) => {
@@ -69,21 +74,25 @@ const Dashboard = () => {
   };
 
   const statusBadge = (status: Message["status"]) => {
-    if (status === "approved")
-      return <Badge className="bg-primary text-primary-foreground">Approved</Badge>;
-    return <Badge variant="destructive">Rejected</Badge>;
-  };
-
-  const categoryBadgeClass = (type: MessageType) => {
-    const variant = getCategoryColor(type);
-    return variant;
+    switch (status) {
+      case "approved":
+        return <Badge className="bg-primary text-primary-foreground">Approved</Badge>;
+      case "rejected":
+        return <Badge variant="destructive">Rejected</Badge>;
+      case "solved":
+        return <Badge className="bg-primary text-primary-foreground">Solved</Badge>;
+      case "unsolved":
+        return <Badge variant="destructive">Unsolved</Badge>;
+      default:
+        return null;
+    }
   };
 
   const MessageCard = ({ msg, compact = false }: { msg: Message; compact?: boolean }) => (
     <Card className="border border-primary/30 shadow-sm animate-fade-in">
       <CardContent className={compact ? "p-4" : "p-5"}>
         <div className="flex flex-wrap items-center gap-2 mb-2">
-          <Badge variant={categoryBadgeClass(msg.type)}>{msg.type}</Badge>
+          <Badge variant={getCategoryColor(msg.type)}>{msg.type}</Badge>
           {msg.status !== "pending" && statusBadge(msg.status)}
           <span className="ml-auto text-xs text-muted-foreground">
             {format(new Date(msg.timestamp), "MMM d, yyyy")}
@@ -110,14 +119,25 @@ const Dashboard = () => {
         )}
         <div className="mt-3 flex gap-2 flex-wrap">
           {msg.status === "pending" ? (
-            <>
-              <Button size="sm" onClick={() => handleApprove(msg.id)}>
-                <Check className="mr-1 h-4 w-4" /> Approve
-              </Button>
-              <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => handleReject(msg.id)}>
-                <X className="mr-1 h-4 w-4" /> Reject
-              </Button>
-            </>
+            isSolveType(msg.type) ? (
+              <>
+                <Button size="sm" onClick={() => handleAction(msg.id, "solved", "Solved")}>
+                  <CheckCircle className="mr-1 h-4 w-4" /> Solve
+                </Button>
+                <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => handleAction(msg.id, "unsolved", "Unsolved")}>
+                  <XCircle className="mr-1 h-4 w-4" /> Unsolve
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" onClick={() => handleAction(msg.id, "approved", "Approved")}>
+                  <Check className="mr-1 h-4 w-4" /> Approve
+                </Button>
+                <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => handleAction(msg.id, "rejected", "Rejected")}>
+                  <X className="mr-1 h-4 w-4" /> Reject
+                </Button>
+              </>
+            )
           ) : (
             <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(msg.id)}>
               <Trash2 className="mr-1 h-4 w-4" /> Delete
@@ -143,7 +163,7 @@ const Dashboard = () => {
         </div>
 
         <div className="mb-6">
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setShowAllPending(false); }}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
@@ -164,9 +184,28 @@ const Dashboard = () => {
             <p className="text-muted-foreground text-sm py-8 text-center">No pending messages.</p>
           ) : (
             <div className="space-y-4">
-              {pending.map((msg) => (
+              {visiblePending.map((msg) => (
                 <MessageCard key={msg.id} msg={msg} />
               ))}
+              {shouldCollapsePending && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setShowAllPending(true)}
+                >
+                  +{hiddenPendingCount} more <ChevronDown className="ml-1 h-4 w-4" />
+                </Button>
+              )}
+              {showAllPending && categoryFilter === "all" && pending.length > INITIAL_VISIBLE && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-muted-foreground"
+                  onClick={() => setShowAllPending(false)}
+                >
+                  Show less <ChevronUp className="ml-1 h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
         </section>
