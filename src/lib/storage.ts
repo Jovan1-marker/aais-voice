@@ -1,5 +1,5 @@
 export type MessageType = "Suggestion" | "Concern" | "Feedback" | "Confession" | "Appreciation";
-export type MessageStatus = "pending" | "approved" | "rejected";
+export type MessageStatus = "pending" | "approved" | "rejected" | "solved" | "unsolved";
 
 export interface AttachedFile {
   name: string;
@@ -62,7 +62,7 @@ export function cleanOldHistory() {
   const messages = getMessages();
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const filtered = messages.filter(
-    (m) => m.status === "pending" || new Date(m.timestamp).getTime() > sevenDaysAgo
+    (m) => m.status === "pending" || m.status === "unsolved" || new Date(m.timestamp).getTime() > sevenDaysAgo
   );
   saveMessages(filtered);
   return filtered;
