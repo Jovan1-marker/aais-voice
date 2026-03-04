@@ -24,6 +24,7 @@ const Header = () => {
           <div>
             <h1 className="text-lg font-bold text-primary leading-tight">Army's Angels Integrated School, Inc.</h1>
             <p className="text-xs text-muted-foreground leading-tight hidden sm:block">
+              {!isDashboard && <span className="block">Anonymous Suggestion Website</span>}
               {isDashboard && <span className="block">Admin Dashboard</span>}
             </p>
           </div>
