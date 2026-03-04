@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { addMessage, fileToBase64, MESSAGE_TYPES, type MessageType, type AttachedFile } from "@/lib/storage";
-import { Upload, FileText, X, Image as ImageIcon } from "lucide-react";
+import { Upload, FileText, X } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -47,7 +47,7 @@ const Index = () => {
     if (f) handleFile(f);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!type) {
       toast({ title: "Select a category", description: "Please choose a message type.", variant: "destructive" });
       return;
@@ -61,13 +61,17 @@ const Index = () => {
       return;
     }
     setIsSubmitting(true);
-    addMessage({ type: type as MessageType, message: message.trim(), ...(file ? { file } : {}) });
-    toast({ title: "✅ Submitted!", description: "Your anonymous message has been sent." });
-    setType("");
-    setMessage("");
-    setFile(null);
-    setFileName("");
-    setFilePreview(null);
+    const result = await addMessage({ type: type as MessageType, message: message.trim(), ...(file ? { file } : {}) });
+    if (result) {
+      toast({ title: "✅ Submitted!", description: "Your anonymous message has been sent." });
+      setType("");
+      setMessage("");
+      setFile(null);
+      setFileName("");
+      setFilePreview(null);
+    } else {
+      toast({ title: "Error", description: "Failed to submit. Please try again.", variant: "destructive" });
+    }
     setIsSubmitting(false);
   };
 
@@ -134,9 +138,7 @@ const Index = () => {
                   onDrop={handleDrop}
                 >
                   <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Attach file (optional – image, pdf, document)
-                  </p>
+                  <p className="text-sm text-muted-foreground">Attach file (optional – image, pdf, document)</p>
                   <p className="text-xs text-muted-foreground mt-1">PNG, JPG, PDF, DOCX • Max 5MB</p>
                   <input
                     ref={fileInputRef}
@@ -169,7 +171,7 @@ const Index = () => {
                 onClick={handleSubmit}
                 disabled={isSubmitting}
               >
-                Submit Anonymously
+                {isSubmitting ? "Submitting..." : "Submit Anonymously"}
               </Button>
             </CardContent>
           </Card>

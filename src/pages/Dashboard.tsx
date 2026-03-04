@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,12 @@ const Dashboard = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showAllPending, setShowAllPending] = useState(false);
 
+  const reload = useCallback(async () => {
+    await cleanOldHistory();
+    const msgs = await getMessages();
+    setMessages(msgs);
+  }, []);
+
   useEffect(() => {
     if (sessionStorage.getItem("isAdmin") !== "true") {
       navigate("/admin");
@@ -34,11 +40,6 @@ const Dashboard = () => {
     }
     reload();
   }, []);
-
-  const reload = () => {
-    const cleaned = cleanOldHistory();
-    setMessages(cleaned);
-  };
 
   const filtered = (statuses: Message["status"][]) => {
     let msgs = messages.filter((m) => statuses.includes(m.status));
@@ -55,21 +56,20 @@ const Dashboard = () => {
 
   const totalPending = messages.filter((m) => m.status === "pending").length;
 
-  // Show collapse when "all" filter and 3+ pending
   const shouldCollapsePending = categoryFilter === "all" && pending.length > INITIAL_VISIBLE && !showAllPending;
   const visiblePending = shouldCollapsePending ? pending.slice(0, INITIAL_VISIBLE) : pending;
   const hiddenPendingCount = pending.length - INITIAL_VISIBLE;
 
-  const handleAction = (id: number, status: Message["status"], label: string) => {
-    updateMessageStatus(id, status);
-    reload();
+  const handleAction = async (id: number, status: Message["status"], label: string) => {
+    await updateMessageStatus(id, status);
+    await reload();
     const emoji = status === "approved" || status === "solved" ? "✅" : "❌";
     toast({ title: `${emoji} ${label}` });
   };
 
-  const handleDelete = (id: number) => {
-    deleteMessage(id);
-    reload();
+  const handleDelete = async (id: number) => {
+    await deleteMessage(id);
+    await reload();
     toast({ title: "🗑️ Deleted" });
   };
 
@@ -104,11 +104,7 @@ const Dashboard = () => {
         {msg.file && (
           <div className="mt-3">
             {isImageFile(msg.file.type) ? (
-              <img
-                src={getBase64Src(msg.file)}
-                alt={msg.file.name}
-                className="max-h-48 rounded-md border"
-              />
+              <img src={getBase64Src(msg.file)} alt={msg.file.name} className="max-h-48 rounded-md border" />
             ) : (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <FileText className="h-5 w-5" />
@@ -177,9 +173,7 @@ const Dashboard = () => {
         </div>
 
         <section className="mb-10">
-          <h3 className="text-lg font-semibold text-primary mb-4">
-            Submitted Anonymous Messages
-          </h3>
+          <h3 className="text-lg font-semibold text-primary mb-4">Submitted Anonymous Messages</h3>
           {pending.length === 0 ? (
             <p className="text-muted-foreground text-sm py-8 text-center">No pending messages.</p>
           ) : (
@@ -188,21 +182,12 @@ const Dashboard = () => {
                 <MessageCard key={msg.id} msg={msg} />
               ))}
               {shouldCollapsePending && (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setShowAllPending(true)}
-                >
+                <Button variant="outline" className="w-full" onClick={() => setShowAllPending(true)}>
                   +{hiddenPendingCount} more <ChevronDown className="ml-1 h-4 w-4" />
                 </Button>
               )}
               {showAllPending && categoryFilter === "all" && pending.length > INITIAL_VISIBLE && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-muted-foreground"
-                  onClick={() => setShowAllPending(false)}
-                >
+                <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setShowAllPending(false)}>
                   Show less <ChevronUp className="ml-1 h-4 w-4" />
                 </Button>
               )}
@@ -213,12 +198,7 @@ const Dashboard = () => {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-primary">History</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowHistory(!showHistory)}
-              className="text-muted-foreground"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)} className="text-muted-foreground">
               {showHistory ? (
                 <>Hide <ChevronUp className="ml-1 h-4 w-4" /></>
               ) : (

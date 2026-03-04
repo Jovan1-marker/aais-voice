@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export type MessageType = "Suggestion" | "Concern" | "Feedback" | "Confession" | "Appreciation";
 export type MessageStatus = "pending" | "approved" | "rejected" | "solved" | "unsolved";
 
@@ -16,56 +18,76 @@ export interface Message {
   status: MessageStatus;
 }
 
-const STORAGE_KEY = "aais_messages";
+export async function getMessages(): Promise<Message[]> {
+  const { data, error } = await supabase
+    .from("aais_messages")
+    .select("*")
+    .order("timestamp", { ascending: false });
 
-export function getMessages(): Message[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  if (error || !data) return [];
+
+  return data.map((row) => ({
+    id: row.id,
+    type: row.type as MessageType,
+    message: row.message,
+    timestamp: row.timestamp,
+    status: row.status as MessageStatus,
+    ...(row.file_name
+      ? { file: { name: row.file_name, type: row.file_type!, data: row.file_data! } }
+      : {}),
+  }));
 }
 
-export function saveMessages(messages: Message[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-}
-
-export function addMessage(msg: Omit<Message, "id" | "timestamp" | "status">): Message {
-  const messages = getMessages();
-  const newMsg: Message = {
-    ...msg,
+export async function addMessage(
+  msg: Omit<Message, "id" | "timestamp" | "status">
+): Promise<Message | null> {
+  const row: Record<string, unknown> = {
     id: Date.now(),
-    timestamp: new Date().toISOString(),
+    type: msg.type,
+    message: msg.message,
     status: "pending",
   };
-  messages.push(newMsg);
-  saveMessages(messages);
-  return newMsg;
-}
-
-export function updateMessageStatus(id: number, status: MessageStatus) {
-  const messages = getMessages();
-  const idx = messages.findIndex((m) => m.id === id);
-  if (idx !== -1) {
-    messages[idx].status = status;
-    saveMessages(messages);
+  if (msg.file) {
+    row.file_name = msg.file.name;
+    row.file_type = msg.file.type;
+    row.file_data = msg.file.data;
   }
+
+  const { data, error } = await supabase
+    .from("aais_messages")
+    .insert(row as any)
+    .select()
+    .single();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    type: data.type as MessageType,
+    message: data.message,
+    timestamp: data.timestamp,
+    status: data.status as MessageStatus,
+    ...(data.file_name
+      ? { file: { name: data.file_name, type: data.file_type!, data: data.file_data! } }
+      : {}),
+  };
 }
 
-export function deleteMessage(id: number) {
-  const messages = getMessages().filter((m) => m.id !== id);
-  saveMessages(messages);
+export async function updateMessageStatus(id: number, status: MessageStatus) {
+  await supabase.from("aais_messages").update({ status }).eq("id", id);
 }
 
-export function cleanOldHistory() {
-  const messages = getMessages();
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const filtered = messages.filter(
-    (m) => m.status === "pending" || m.status === "unsolved" || new Date(m.timestamp).getTime() > sevenDaysAgo
-  );
-  saveMessages(filtered);
-  return filtered;
+export async function deleteMessage(id: number) {
+  await supabase.from("aais_messages").delete().eq("id", id);
+}
+
+export async function cleanOldHistory() {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  await supabase
+    .from("aais_messages")
+    .delete()
+    .in("status", ["approved", "rejected", "solved"])
+    .lt("timestamp", sevenDaysAgo);
 }
 
 export function fileToBase64(file: File): Promise<AttachedFile> {
