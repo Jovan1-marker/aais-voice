@@ -61,3 +61,13 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
+
+#lovable-badge {
+  display: none !important;
+}
+
+[data-lovable-badge],
+[id*="lovable-badge"],
+[class*="lovable-badge"] {
+  display: none !important;
+}
