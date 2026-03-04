@@ -8,29 +8,50 @@
   :root {
     --background: 120 40% 93%;
     --foreground: 0 0% 15%;
+
     --card: 0 0% 100%;
     --card-foreground: 0 0% 15%;
+
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 15%;
+
     --primary: 120 100% 20%;
     --primary-foreground: 0 0% 100%;
+
     --secondary: 120 30% 85%;
     --secondary-foreground: 120 100% 20%;
+
     --muted: 120 20% 90%;
     --muted-foreground: 0 0% 40%;
+
     --accent: 50 100% 95%;
     --accent-foreground: 120 100% 20%;
+
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
+
     --border: 120 40% 50%;
     --input: 120 20% 80%;
     --ring: 120 100% 20%;
+
     --radius: 0.75rem;
+
     --header-bg: 50 100% 95%;
     --warning: 30 90% 50%;
     --warning-foreground: 0 0% 100%;
-  }
 
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }
@@ -38,91 +59,5 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-}
-
-@layer components {
-  .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200;
-    border-radius: 8px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn:hover {
-    @apply translate-y-[-2px] shadow-lg;
-    filter: brightness(1.08);
-  }
-
-  .btn:active {
-    @apply translate-y-0 shadow-md;
-  }
-
-  .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90;
-  }
-
-  .btn-primary:hover {
-    box-shadow: 0 0 20px 8px hsl(120 100% 20% / 0.4);
-  }
-
-  .btn-secondary {
-    @apply bg-secondary text-secondary-foreground border border-border hover:bg-secondary/90;
-  }
-
-  .btn-secondary:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-
-  .input-field {
-    @apply bg-card border border-input rounded-md px-3 py-2 text-sm transition-all duration-200;
-  }
-
-  .input-field:focus {
-    @apply outline-none border-primary ring-2 ring-primary/30 bg-white;
-    box-shadow: 0 0 0 4px hsl(120 100% 20% / 0.15);
-  }
-
-  .glow-green {
-    box-shadow: 0 0 20px 8px hsl(120 100% 20% / 0.6);
-  }
-
-  .glow-warning {
-    box-shadow: 0 0 20px 8px hsl(30 90% 50% / 0.6);
-  }
-
-  .glow-destructive {
-    box-shadow: 0 0 20px 8px hsl(0 84% 60% / 0.6);
-  }
-
-  ::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: hsl(120 40% 50%);
-    border-radius: 3px;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(120 100% 20%);
-  }
-
-  .card-hover {
-    @apply transition-all duration-200 hover:translate-y-[-4px] hover:shadow-xl;
-  }
-
-  .card-hover:hover {
-    box-shadow: 0 10px 30px rgba(0,0,0,0.12), 0 0 20px hsl(120 100% 20% / 0.15);
   }
 }
