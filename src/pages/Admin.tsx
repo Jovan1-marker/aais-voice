@@ -15,7 +15,7 @@ const Admin = () => {
   const { toast } = useToast();
 
   const handleLogin = () => {
-    if (password === "admin123") {
+    if (password === "pogisijovan123") {
       sessionStorage.setItem("isAdmin", "true");
       navigate("/dashboard");
     } else {
