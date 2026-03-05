@@ -12,9 +12,24 @@ import { FileText, ArrowLeft, ChevronDown } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ImageLightbox from "@/components/ImageLightbox";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 
 const INITIAL_VISIBLE = 3;
+
+const TimeAgo = ({ timestamp }: { timestamp: string }) => {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <span className="text-xs text-muted-foreground">
+      {format(new Date(timestamp), "MMM d, yyyy")} · {formatDistanceToNow(new Date(timestamp), { addSuffix: true })}
+    </span>
+  );
+};
 
 const Posts = () => {
   const navigate = useNavigate();
@@ -82,8 +97,8 @@ const Posts = () => {
                 <CardContent className="p-5">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <Badge variant={getCategoryColor(msg.type)}>{msg.type}</Badge>
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {format(new Date(msg.timestamp), "MMM d, yyyy")}
+                    <span className="ml-auto">
+                      <TimeAgo timestamp={msg.timestamp} />
                     </span>
                   </div>
                   <p className="text-foreground whitespace-pre-wrap break-words">{msg.message}</p>
