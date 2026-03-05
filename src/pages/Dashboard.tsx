@@ -11,7 +11,7 @@ import {
   type Message, type MessageType, MESSAGE_TYPES, getCategoryColor,
   isImageFile, getBase64Src,
 } from "@/lib/storage";
-import { Check, X, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle, XCircle } from "lucide-react";
+import { Check, X, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle, XCircle, Newspaper } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ImageLightbox from "@/components/ImageLightbox";
@@ -42,6 +42,8 @@ const Dashboard = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showSolveHistory, setShowSolveHistory] = useState(false);
+  const [showPublishedPosts, setShowPublishedPosts] = useState(false);
+  const [showAllPosts, setShowAllPosts] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showAllPending, setShowAllPending] = useState(false);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
@@ -82,6 +84,9 @@ const Dashboard = () => {
   };
 
   const pending = filtered(["pending"]);
+  const approvedPosts = messages
+    .filter((m) => m.status === "approved")
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   const approveRejectHistory = filtered(["approved", "rejected"]).sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
@@ -94,6 +99,10 @@ const Dashboard = () => {
   const shouldCollapsePending = categoryFilter === "all" && pending.length > INITIAL_VISIBLE && !showAllPending;
   const visiblePending = shouldCollapsePending ? pending.slice(0, INITIAL_VISIBLE) : pending;
   const hiddenPendingCount = pending.length - INITIAL_VISIBLE;
+
+  const shouldCollapsePosts = approvedPosts.length > INITIAL_VISIBLE && !showAllPosts;
+  const visiblePosts = shouldCollapsePosts ? approvedPosts.slice(0, INITIAL_VISIBLE) : approvedPosts;
+  const hiddenPostsCount = approvedPosts.length - INITIAL_VISIBLE;
 
   const handleAction = async (id: number, status: Message["status"], label: string) => {
     await updateMessageStatus(id, status);
@@ -123,19 +132,16 @@ const Dashboard = () => {
     }
   };
 
-  const MessageCard = ({ msg, compact = false }: { msg: Message; compact?: boolean }) => (
+  const PendingCard = ({ msg }: { msg: Message }) => (
     <Card className="border border-primary/30 shadow-sm animate-fade-in">
-      <CardContent className={compact ? "p-4" : "p-5"}>
+      <CardContent className="p-5">
         <div className="flex flex-wrap items-center gap-2 mb-2">
           <Badge variant={getCategoryColor(msg.type)}>{msg.type}</Badge>
-          {msg.status !== "pending" && statusBadge(msg.status)}
           <span className="ml-auto">
             <TimeAgo timestamp={msg.timestamp} />
           </span>
         </div>
-        <p className={`text-foreground ${compact ? "text-sm" : ""} whitespace-pre-wrap break-words`}>
-          {msg.message}
-        </p>
+        <p className="text-foreground whitespace-pre-wrap break-words">{msg.message}</p>
         {msg.file && (
           <div className="mt-3">
             {isImageFile(msg.file.type) ? (
@@ -154,31 +160,62 @@ const Dashboard = () => {
           </div>
         )}
         <div className="mt-3 flex gap-2 flex-wrap">
-          {msg.status === "pending" ? (
-            isSolveType(msg.type) ? (
-              <>
-                <Button size="sm" onClick={() => handleAction(msg.id, "solved", "Solved")}>
-                  <CheckCircle className="mr-1 h-4 w-4" /> Solve
-                </Button>
-                <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => handleAction(msg.id, "unsolved", "Unsolved")}>
-                  <XCircle className="mr-1 h-4 w-4" /> Unsolve
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button size="sm" onClick={() => handleAction(msg.id, "approved", "Approved")}>
-                  <Check className="mr-1 h-4 w-4" /> Approve
-                </Button>
-                <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => handleAction(msg.id, "rejected", "Rejected")}>
-                  <X className="mr-1 h-4 w-4" /> Reject
-                </Button>
-              </>
-            )
+          {isSolveType(msg.type) ? (
+            <>
+              <Button size="sm" onClick={() => handleAction(msg.id, "solved", "Solved")}>
+                <CheckCircle className="mr-1 h-4 w-4" /> Solve
+              </Button>
+              <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => handleAction(msg.id, "unsolved", "Unsolved")}>
+                <XCircle className="mr-1 h-4 w-4" /> Unsolve
+              </Button>
+            </>
           ) : (
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(msg.id)}>
-              <Trash2 className="mr-1 h-4 w-4" /> Delete
-            </Button>
+            <>
+              <Button size="sm" onClick={() => handleAction(msg.id, "approved", "Approved")}>
+                <Check className="mr-1 h-4 w-4" /> Approve
+              </Button>
+              <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => handleAction(msg.id, "rejected", "Rejected")}>
+                <X className="mr-1 h-4 w-4" /> Reject
+              </Button>
+            </>
           )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const PostCard = ({ msg }: { msg: Message }) => (
+    <Card className="border border-primary/20 shadow-sm animate-fade-in">
+      <CardContent className="p-4">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <Badge variant={getCategoryColor(msg.type)}>{msg.type}</Badge>
+          <Badge className="bg-primary text-primary-foreground">Approved</Badge>
+          <span className="ml-auto">
+            <TimeAgo timestamp={msg.timestamp} />
+          </span>
+        </div>
+        <p className="text-foreground text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+        {msg.file && (
+          <div className="mt-3">
+            {isImageFile(msg.file.type) ? (
+              <img
+                src={getBase64Src(msg.file)}
+                alt={msg.file.name}
+                className="max-h-40 rounded-md border cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setLightbox({ src: getBase64Src(msg.file!), alt: msg.file!.name })}
+              />
+            ) : (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <FileText className="h-5 w-5" />
+                <span>{msg.file.name}</span>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="mt-3">
+          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(msg.id)}>
+            <Trash2 className="mr-1 h-4 w-4" /> Delete from Posts
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -211,7 +248,25 @@ const Dashboard = () => {
           {items.length === 0 ? (
             <p className="text-muted-foreground text-sm py-4 text-center">No history yet.</p>
           ) : (
-            items.map((msg) => <MessageCard key={msg.id} msg={msg} compact />)
+            items.map((msg) => (
+              <Card key={msg.id} className="border border-primary/30 shadow-sm animate-fade-in">
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <Badge variant={getCategoryColor(msg.type)}>{msg.type}</Badge>
+                    {statusBadge(msg.status)}
+                    <span className="ml-auto">
+                      <TimeAgo timestamp={msg.timestamp} />
+                    </span>
+                  </div>
+                  <p className="text-foreground text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                  <div className="mt-3">
+                    <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(msg.id)}>
+                      <Trash2 className="mr-1 h-4 w-4" /> Delete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </div>
       )}
@@ -253,7 +308,7 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-4">
               {visiblePending.map((msg) => (
-                <MessageCard key={msg.id} msg={msg} />
+                <PendingCard key={msg.id} msg={msg} />
               ))}
               {shouldCollapsePending && (
                 <Button variant="outline" className="w-full" onClick={() => setShowAllPending(true)}>
@@ -264,6 +319,45 @@ const Dashboard = () => {
                 <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setShowAllPending(false)}>
                   Show less <ChevronUp className="ml-1 h-4 w-4" />
                 </Button>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Published Posts - inline in dashboard */}
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-primary flex items-center gap-2">
+              <Newspaper className="h-5 w-5" /> Published Posts
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => { setShowPublishedPosts(!showPublishedPosts); setShowAllPosts(false); }} className="text-muted-foreground">
+              {showPublishedPosts ? (
+                <>Hide <ChevronUp className="ml-1 h-4 w-4" /></>
+              ) : (
+                <>{approvedPosts.length} posts <ChevronDown className="ml-1 h-4 w-4" /></>
+              )}
+            </Button>
+          </div>
+          {showPublishedPosts && (
+            <div className="space-y-3">
+              {approvedPosts.length === 0 ? (
+                <p className="text-muted-foreground text-sm py-4 text-center">No published posts yet.</p>
+              ) : (
+                <>
+                  {visiblePosts.map((msg) => (
+                    <PostCard key={msg.id} msg={msg} />
+                  ))}
+                  {shouldCollapsePosts && (
+                    <Button variant="outline" className="w-full" onClick={() => setShowAllPosts(true)}>
+                      +{hiddenPostsCount} more <ChevronDown className="ml-1 h-4 w-4" />
+                    </Button>
+                  )}
+                  {showAllPosts && approvedPosts.length > INITIAL_VISIBLE && (
+                    <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setShowAllPosts(false)}>
+                      Show less <ChevronUp className="ml-1 h-4 w-4" />
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           )}
