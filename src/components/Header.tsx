@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, Newspaper } from "lucide-react";
+import { LogOut } from "lucide-react";
 import logo from "@/assets/aais_logo.jpg";
 
 const Header = () => {
@@ -33,11 +33,6 @@ const Header = () => {
           {!isDashboard && (
             <Button variant="outline" size="sm" onClick={() => navigate("/posts")}>
               Posts
-            </Button>
-          )}
-          {isDashboard && (
-            <Button variant="outline" size="sm" onClick={() => navigate("/posts")}>
-              <Newspaper className="mr-1 h-4 w-4" /> Published Posts
             </Button>
           )}
           {isDashboard ? (
