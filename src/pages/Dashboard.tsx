@@ -27,8 +27,10 @@ const Dashboard = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showSolveHistory, setShowSolveHistory] = useState(false);
+  const [showApprovedPosts, setShowApprovedPosts] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showAllPending, setShowAllPending] = useState(false);
+  const [showAllPosts, setShowAllPosts] = useState(false);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
 
   const reload = useCallback(async () => {
@@ -67,6 +69,9 @@ const Dashboard = () => {
   };
 
   const pending = filtered(["pending"]);
+  const approvedPosts = filtered(["approved"]).sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
   const approveRejectHistory = filtered(["approved", "rejected"]).sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
@@ -79,6 +84,10 @@ const Dashboard = () => {
   const shouldCollapsePending = categoryFilter === "all" && pending.length > INITIAL_VISIBLE && !showAllPending;
   const visiblePending = shouldCollapsePending ? pending.slice(0, INITIAL_VISIBLE) : pending;
   const hiddenPendingCount = pending.length - INITIAL_VISIBLE;
+
+  const shouldCollapsePosts = approvedPosts.length > INITIAL_VISIBLE && !showAllPosts;
+  const visiblePosts = shouldCollapsePosts ? approvedPosts.slice(0, INITIAL_VISIBLE) : approvedPosts;
+  const hiddenPostsCount = approvedPosts.length - INITIAL_VISIBLE;
 
   const handleAction = async (id: number, status: Message["status"], label: string) => {
     await updateMessageStatus(id, status);
@@ -108,7 +117,7 @@ const Dashboard = () => {
     }
   };
 
-  const MessageCard = ({ msg, compact = false }: { msg: Message; compact?: boolean }) => (
+  const MessageCard = ({ msg, compact = false, showDelete = false }: { msg: Message; compact?: boolean; showDelete?: boolean }) => (
     <Card className="border border-primary/30 shadow-sm animate-fade-in">
       <CardContent className={compact ? "p-4" : "p-5"}>
         <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -159,6 +168,10 @@ const Dashboard = () => {
                 </Button>
               </>
             )
+          ) : showDelete ? (
+            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(msg.id)}>
+              <Trash2 className="mr-1 h-4 w-4" /> Delete
+            </Button>
           ) : (
             <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(msg.id)}>
               <Trash2 className="mr-1 h-4 w-4" /> Delete
@@ -218,7 +231,7 @@ const Dashboard = () => {
         </div>
 
         <div className="mb-6">
-          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setShowAllPending(false); }}>
+          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setShowAllPending(false); setShowAllPosts(false); }}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
@@ -249,6 +262,43 @@ const Dashboard = () => {
                 <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setShowAllPending(false)}>
                   Show less <ChevronUp className="ml-1 h-4 w-4" />
                 </Button>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Approved Posts Section */}
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-primary">Published Posts</h3>
+            <Button variant="ghost" size="sm" onClick={() => setShowApprovedPosts(!showApprovedPosts)} className="text-muted-foreground">
+              {showApprovedPosts ? (
+                <>Hide <ChevronUp className="ml-1 h-4 w-4" /></>
+              ) : (
+                <>{approvedPosts.length} posts <ChevronDown className="ml-1 h-4 w-4" /></>
+              )}
+            </Button>
+          </div>
+          {showApprovedPosts && (
+            <div className="space-y-3">
+              {approvedPosts.length === 0 ? (
+                <p className="text-muted-foreground text-sm py-4 text-center">No published posts.</p>
+              ) : (
+                <>
+                  {visiblePosts.map((msg) => (
+                    <MessageCard key={msg.id} msg={msg} compact showDelete />
+                  ))}
+                  {shouldCollapsePosts && (
+                    <Button variant="outline" className="w-full" onClick={() => setShowAllPosts(true)}>
+                      +{hiddenPostsCount} more <ChevronDown className="ml-1 h-4 w-4" />
+                    </Button>
+                  )}
+                  {showAllPosts && approvedPosts.length > INITIAL_VISIBLE && (
+                    <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => setShowAllPosts(false)}>
+                      Show less <ChevronUp className="ml-1 h-4 w-4" />
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           )}
