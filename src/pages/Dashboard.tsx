@@ -14,6 +14,7 @@ import {
 import { Check, X, Trash2, ChevronDown, ChevronUp, FileText, CheckCircle, XCircle } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ImageLightbox from "@/components/ImageLightbox";
 import { format } from "date-fns";
 
 const INITIAL_VISIBLE = 3;
@@ -25,8 +26,10 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showSolveHistory, setShowSolveHistory] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showAllPending, setShowAllPending] = useState(false);
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
 
   const reload = useCallback(async () => {
     await cleanOldHistory();
@@ -64,7 +67,10 @@ const Dashboard = () => {
   };
 
   const pending = filtered(["pending"]);
-  const history = filtered(["approved", "rejected", "solved", "unsolved"]).sort(
+  const approveRejectHistory = filtered(["approved", "rejected"]).sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+  const solveHistory = filtered(["solved", "unsolved"]).sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
@@ -118,7 +124,12 @@ const Dashboard = () => {
         {msg.file && (
           <div className="mt-3">
             {isImageFile(msg.file.type) ? (
-              <img src={getBase64Src(msg.file)} alt={msg.file.name} className="max-h-48 rounded-md border" />
+              <img
+                src={getBase64Src(msg.file)}
+                alt={msg.file.name}
+                className="max-h-48 rounded-md border cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setLightbox({ src: getBase64Src(msg.file!), alt: msg.file!.name })}
+              />
             ) : (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <FileText className="h-5 w-5" />
@@ -156,6 +167,40 @@ const Dashboard = () => {
         </div>
       </CardContent>
     </Card>
+  );
+
+  const HistorySection = ({
+    title,
+    items,
+    show,
+    onToggle,
+  }: {
+    title: string;
+    items: Message[];
+    show: boolean;
+    onToggle: () => void;
+  }) => (
+    <section className="mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-primary">{title}</h3>
+        <Button variant="ghost" size="sm" onClick={onToggle} className="text-muted-foreground">
+          {show ? (
+            <>Hide <ChevronUp className="ml-1 h-4 w-4" /></>
+          ) : (
+            <>+{items.length} in history <ChevronDown className="ml-1 h-4 w-4" /></>
+          )}
+        </Button>
+      </div>
+      {show && (
+        <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+          {items.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-4 text-center">No history yet.</p>
+          ) : (
+            items.map((msg) => <MessageCard key={msg.id} msg={msg} compact />)
+          )}
+        </div>
+      )}
+    </section>
   );
 
   return (
@@ -209,31 +254,30 @@ const Dashboard = () => {
           )}
         </section>
 
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-primary">History</h3>
-            <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)} className="text-muted-foreground">
-              {showHistory ? (
-                <>Hide <ChevronUp className="ml-1 h-4 w-4" /></>
-              ) : (
-                <>+{history.length} in history <ChevronDown className="ml-1 h-4 w-4" /></>
-              )}
-            </Button>
-          </div>
-          {showHistory && (
-            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-              {history.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-4 text-center">No history yet.</p>
-              ) : (
-                history.map((msg) => (
-                  <MessageCard key={msg.id} msg={msg} compact />
-                ))
-              )}
-            </div>
-          )}
-        </section>
+        <HistorySection
+          title="Approved / Rejected History"
+          items={approveRejectHistory}
+          show={showHistory}
+          onToggle={() => setShowHistory(!showHistory)}
+        />
+
+        <HistorySection
+          title="Solved / Unsolved History"
+          items={solveHistory}
+          show={showSolveHistory}
+          onToggle={() => setShowSolveHistory(!showSolveHistory)}
+        />
       </main>
       <Footer />
+
+      {lightbox && (
+        <ImageLightbox
+          src={lightbox.src}
+          alt={lightbox.alt}
+          open={!!lightbox}
+          onOpenChange={(open) => !open && setLightbox(null)}
+        />
+      )}
     </div>
   );
 };

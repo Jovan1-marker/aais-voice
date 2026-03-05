@@ -29,7 +29,12 @@ const Header = () => {
             </p>
           </div>
         </div>
-        <div>
+        <div className="flex items-center gap-2">
+          {!isDashboard && (
+            <Button variant="outline" size="sm" onClick={() => navigate("/posts")}>
+              Posts
+            </Button>
+          )}
           {isDashboard ? (
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="mr-1 h-4 w-4" /> Sign out
