@@ -5,13 +5,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  getBase64Src, isImageFile, getCategoryColor,
+  getBase64Src, isImageFile, getCategoryColor, deleteMessage,
   type Message, type MessageType,
 } from "@/lib/storage";
-import { FileText, ArrowLeft, ChevronDown } from "lucide-react";
+import { FileText, ArrowLeft, ChevronDown, Trash2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ImageLightbox from "@/components/ImageLightbox";
+import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 
 const INITIAL_VISIBLE = 3;
@@ -33,6 +34,8 @@ const TimeAgo = ({ timestamp }: { timestamp: string }) => {
 
 const Posts = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const isAdmin = sessionStorage.getItem("isAdmin") === "true";
   const [posts, setPosts] = useState<Message[]>([]);
   const [showAll, setShowAll] = useState(false);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
@@ -60,6 +63,12 @@ const Posts = () => {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    await deleteMessage(id);
+    await loadPosts();
+    toast({ title: "🗑️ Post deleted" });
+  };
+
   useEffect(() => {
     loadPosts();
 
@@ -79,12 +88,16 @@ const Posts = () => {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-3xl">
         <div className="mb-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-muted-foreground mb-2">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Submit
-          </Button>
+          {!isAdmin && (
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-muted-foreground mb-2">
+              <ArrowLeft className="mr-1 h-4 w-4" /> Back to Submit
+            </Button>
+          )}
           <div className="text-center">
             <h2 className="text-2xl font-bold text-primary">Freedom Wall</h2>
-            <p className="text-muted-foreground text-sm mt-1">Approved anonymous messages from the community</p>
+            <p className="text-muted-foreground text-sm mt-1">
+              {isAdmin ? "Manage published posts" : "Approved anonymous messages from the community"}
+            </p>
           </div>
         </div>
 
@@ -117,6 +130,13 @@ const Posts = () => {
                           <span>{msg.file.name}</span>
                         </div>
                       )}
+                    </div>
+                  )}
+                  {isAdmin && (
+                    <div className="mt-3">
+                      <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(msg.id)}>
+                        <Trash2 className="mr-1 h-4 w-4" /> Delete
+                      </Button>
                     </div>
                   )}
                 </CardContent>
